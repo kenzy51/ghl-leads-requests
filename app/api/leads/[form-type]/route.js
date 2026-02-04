@@ -1,43 +1,9 @@
-// import { NextResponse } from "next/server";
-// import { FORM_ROUTING } from "../../../../app/lib/config";
-// export async function POST(req, { params }) {
-//   const resolvedParams = await params;
-//   const formType = resolvedParams["form-type"];
-//   const config = FORM_ROUTING[formType];
-//   if (!config) {
-//     console.error("Available configs:", Object.keys(FORM_ROUTING));
-//     return NextResponse.json(
-//       { error: `Invalid form type: ${formType}` },
-//       { status: 400 },
-//     );
-//   }
-//   try {
-//     const body = await req.json();
-//     const { name, phone, email, id: contactId } = body;
-//     const newoPayload = {
-//       arguments: [
-//         {
-//           name: "content",
-//           value: `Call the user at ${phone}. User name: ${name}. You are a convoagent who has received an inquiry from an ad regarding the user requesting an ${config.scenario} dental visit. Confirm with the user that their email address is ${email} and follow the scenario.`,
-//         },
-//       ],
-//     };
-
-//     const response = await fetch(config.webhookUrl, {
-//       method: "POST",
-//       headers: { "Content-Type": "application/json" },
-//       body: JSON.stringify(newoPayload),
-//     });
-
-//     return NextResponse.json({ success: response.ok });
-//   } catch (error) {
-//     return NextResponse.json({ error: error.message }, { status: 500 });
-//   }
-// }
-
 import { NextResponse } from "next/server";
 import { FORM_ROUTING } from "../../../../app/lib/config";
+import { Resend } from "resend";
 export async function POST(req, { params }) {
+  const resend = new Resend("re_4TXezg2e_MmgmzzvqrQxSenZTsgt8HHaT");
+
   const resolvedParams = await params;
   const formType = resolvedParams["form-type"];
   const config = FORM_ROUTING[formType];
@@ -48,12 +14,11 @@ export async function POST(req, { params }) {
       { status: 400 },
     );
   }
-  // ... existing imports and config check
 
   try {
     const body = await req.json();
     // IMPORTANT: Ensure your GHL Webhook sends 'id' or 'contact_id'
-    const { name, phone, email, id: contactId } = body;
+    const { name, phone, email, id: contactId, source } = body;
 
     // 1. Trigger the AI Agent
     const newoResponse = await fetch(config.webhookUrl, {
@@ -68,7 +33,32 @@ export async function POST(req, { params }) {
         ],
       }),
     });
-    console.log(newoResponse);
+    if (newoResponse.ok) {
+      try {
+        await resend.emails.send({
+          from: "Dental Leads <notifications@nytds.com>",
+          to: ["pr@nytds.com"],
+          subject: `🦷 New Emergency Lead: ${name}`,
+          html: `
+        <div style="font-family: sans-serif; padding: 20px; border: 1px solid #eee;">
+          <h2 style="color: #d32f2f;">New Emergency Lead Received</h2>
+          <p><strong>Name:</strong> ${name}</p>
+          <p><strong>Phone:</strong> <a href="tel:${phone}">${phone}</a></p>
+          <p><strong>Email:</strong> ${email}</p>
+          <p><strong>Ad Source:</strong> ${source || "Not specified"}</p>
+          <hr />
+          <p style="color: #666;">✅ <strong>AI Agent:</strong> Outbound call has been triggered via NEWO.</p>
+        </div>
+      `,
+        });
+        console.log("Notification email sent to clinic.");
+      } catch (emailError) {
+        console.error(
+          "Email failed to send, but AI call was triggered:",
+          emailError,
+        );
+      }
+    }
     if (newoResponse.ok && contactId) {
       await fetch(
         `https://services.leadconnectorhq.com/contacts/${contactId}`,
@@ -83,9 +73,9 @@ export async function POST(req, { params }) {
             customFields: [
               {
                 id: "JtJ2Q6ou5Ed73zxNrlnM",
-                key: "ai_called_status", 
+                key: "ai_called_status",
                 field_value: "Called",
-                value: "Called", 
+                value: "Called",
               },
             ],
           }),
