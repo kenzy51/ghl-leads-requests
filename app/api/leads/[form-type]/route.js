@@ -17,10 +17,8 @@ export async function POST(req, { params }) {
 
   try {
     const body = await req.json();
-    // IMPORTANT: Ensure your GHL Webhook sends 'id' or 'contact_id'
     const { name, phone, email, id: contactId, source } = body;
 
-    // 1. Trigger the AI Agent
     const newoResponse = await fetch(config.webhookUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -37,7 +35,7 @@ export async function POST(req, { params }) {
       try {
         await resend.emails.send({
           from: "Dental Leads <notifications@nytds.com>",
-          to: ["pr@nytds.com"],
+          to: ["prteamnytds@gmail.com"],
           subject: `🦷 New Emergency Lead: ${name}`,
           html: `
         <div style="font-family: sans-serif; padding: 20px; border: 1px solid #eee;">
