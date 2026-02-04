@@ -68,7 +68,7 @@ export async function POST(req, { params }) {
         ],
       }),
     });
-    console.log(newoResponse)
+    console.log(newoResponse);
     if (newoResponse.ok && contactId) {
       await fetch(
         `https://services.leadconnectorhq.com/contacts/${contactId}`,
@@ -83,7 +83,9 @@ export async function POST(req, { params }) {
             customFields: [
               {
                 id: "JtJ2Q6ou5Ed73zxNrlnM",
-                value: "Called",
+                key: "ai_called_status", 
+                field_value: "Called",
+                value: "Called", 
               },
             ],
           }),
