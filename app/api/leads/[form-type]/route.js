@@ -35,7 +35,7 @@ export async function POST(req, { params }) {
     try {
       await resend.emails.send({
         from: "onboarding@resend.dev",
-        to: ["prteamnytds@gmail.com"],
+        to: ["kanatnazarov51@gmail.com"],
         subject: `🦷 New Emergency Lead: ${name}`,
         html: `
         <div style="font-family: sans-serif; padding: 20px; border: 1px solid #eee;">
