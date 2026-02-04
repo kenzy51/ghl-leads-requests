@@ -15,7 +15,7 @@ export async function getAllLeads() {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${GHL_API_KEY}`,
-          'Version': '2021-04-15', // Required GHL API Version
+          'Version': '2021-04-15', 
           'Accept': 'application/json',
         },
       }

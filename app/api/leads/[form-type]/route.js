@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
-import { FORM_ROUTING } from '@/lib/config';
-import { getAllLeads } from '@/lib/ghl';
+import { FORM_ROUTING } from '../../../../app/lib/config';
 
 export async function POST(req, { params }) {
   const { formType } = params; 
