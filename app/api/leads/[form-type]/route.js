@@ -49,7 +49,7 @@ export async function POST(req, { params }) {
         </div>
       `,
       });
-      console.log("Notification email sent to clinic.");
+      console.log("Notification email sent to clinic.", body);
     } catch (emailError) {
       console.error(
         "Email failed to send, but AI call was triggered:",
