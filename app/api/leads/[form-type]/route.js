@@ -31,13 +31,13 @@ export async function POST(req, { params }) {
         ],
       }),
     });
-    if (newoResponse.ok) {
-      try {
-        await resend.emails.send({
-          from: "Dental Leads <notifications@nytds.com>",
-          to: ["prteamnytds@gmail.com"],
-          subject: `🦷 New Emergency Lead: ${name}`,
-          html: `
+
+    try {
+      await resend.emails.send({
+        from: "Dental Leads <notifications@nytds.com>",
+        to: ["prteamnytds@gmail.com"],
+        subject: `🦷 New Emergency Lead: ${name}`,
+        html: `
         <div style="font-family: sans-serif; padding: 20px; border: 1px solid #eee;">
           <h2 style="color: #d32f2f;">New Emergency Lead Received</h2>
           <p><strong>Name:</strong> ${name}</p>
@@ -48,36 +48,12 @@ export async function POST(req, { params }) {
           <p style="color: #666;">✅ <strong>AI Agent:</strong> Outbound call has been triggered via NEWO.</p>
         </div>
       `,
-        });
-        console.log("Notification email sent to clinic.");
-      } catch (emailError) {
-        console.error(
-          "Email failed to send, but AI call was triggered:",
-          emailError,
-        );
-      }
-    }
-    if (newoResponse.ok && contactId) {
-      await fetch(
-        `https://services.leadconnectorhq.com/contacts/${contactId}`,
-        {
-          method: "PUT",
-          headers: {
-            Authorization: `Bearer ${process.env.GHL_ACCESS_TOKEN}`,
-            Version: "2021-04-15",
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            customFields: [
-              {
-                id: "JtJ2Q6ou5Ed73zxNrlnM",
-                key: "ai_called_status",
-                field_value: "Called",
-                value: "Called",
-              },
-            ],
-          }),
-        },
+      });
+      console.log("Notification email sent to clinic.");
+    } catch (emailError) {
+      console.error(
+        "Email failed to send, but AI call was triggered:",
+        emailError,
       );
     }
 

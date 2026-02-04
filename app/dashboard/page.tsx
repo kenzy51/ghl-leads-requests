@@ -77,10 +77,7 @@ export default function DashboardPage() {
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {leads.map((lead: LeadType) => {
-              const isCalled = lead.customFields?.some(
-                (field) =>
-                  field.value === "Called" || field.value === "AI agent called",
-              );
+    
 
               return (
                 <tr
