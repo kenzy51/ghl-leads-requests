@@ -26,12 +26,11 @@ export async function POST(req, { params }) {
         arguments: [
           {
             name: "content",
-            value: `Call the user at ${phone}. User name: ${first_name}. You are a convoagent who has received an inquiry from an ad regarding the user requesting an emergency dental.Confirm with the user that their email address is ${email} follow *Emergency Call* scenario"`,
+            value: `Call the user at ${phone}. User name: ${first_name}. You are a convoagent who has received an inquiry from an ad regarding the user potentially signing up for our premium membership plan. Express excitement and inform the caller that they are making a great investment. The plan is $100 per month and includes discounts on several of our services including cleanings, routine exams, x-rays, ct scans and consultation with all of our specialists. Members enjoy discounts on all of our services and treatment. Confirm with the user that their email address is ${email} follow *Outbound promo for Membership plan* scenario`,
           },
         ],
       }),
     });
-
     try {
       await resend.emails.send({
         from: "onboarding@resend.dev",
