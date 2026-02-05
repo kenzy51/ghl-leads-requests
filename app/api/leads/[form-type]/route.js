@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import { FORM_ROUTING } from "../../../../app/lib/config";
 import { Resend } from "resend";
-export async function POST(req, { params }) {
-  const resend = new Resend("re_4TXezg2e_MmgmzzvqrQxSenZTsgt8HHaT");
 
+export async function POST(req, { params }) {
+  const resend = new Resend(process.env.RESEND_API_KEY);
   const resolvedParams = await params;
   const formType = resolvedParams["form-type"];
   const config = FORM_ROUTING[formType];
@@ -17,7 +17,12 @@ export async function POST(req, { params }) {
 
   try {
     const body = await req.json();
-    const { first_name, phone, email, id: contactId, contact_source } = body;
+    const { first_name, phone, email, contact_source } = body;
+    const messageContent = config.generatePrompt({
+      name: first_name,
+      email: email,
+      phone: phone,
+    });
 
     const newoResponse = await fetch(config.webhookUrl, {
       method: "POST",
@@ -26,7 +31,7 @@ export async function POST(req, { params }) {
         arguments: [
           {
             name: "content",
-            value: `Call the user at ${phone}. User name: ${first_name}. You are a convoagent who has received an inquiry from an ad regarding the user potentially signing up for our premium membership plan. Express excitement and inform the caller that they are making a great investment. The plan is $100 per month and includes discounts on several of our services including cleanings, routine exams, x-rays, ct scans and consultation with all of our specialists. Members enjoy discounts on all of our services and treatment. Confirm with the user that their email address is ${email} follow *Outbound promo for Membership plan* scenario`,
+            value: messageContent,
           },
         ],
       }),
