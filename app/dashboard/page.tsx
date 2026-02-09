@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import useSWR from "swr";
+import { useAuth } from "../context/auth-context";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -23,16 +24,20 @@ interface LeadType {
 
 export default function DashboardPage() {
   const [mounted, setMounted] = useState<boolean>(false);
+  const { isAuthenticated } = useAuth();
 
-  const { data: leads, error } = useSWR("/api/leads", fetcher, {
-    refreshInterval: 10000,
-  });
+  const { data: leads, error } = useSWR(
+    isAuthenticated ? "/api/leads" : null,
+    fetcher,
+    { refreshInterval: 10000 }
+  );
 
   useEffect(() => {
-    setMounted(true);
+    queueMicrotask(() => setMounted(true));
   }, []);
 
   if (!mounted) return null;
+  if (!isAuthenticated) return <div>Not authenticated</div>;
   if (error)
     return <div className="p-8 text-red-500">Failed to load leads.</div>;
   if (!leads)
@@ -72,13 +77,10 @@ export default function DashboardPage() {
               <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
                 Source
               </th>
-              {/* <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">IS CALLED BY AI AGENT</th> */}
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {leads.map((lead: LeadType) => {
-    
-
               return (
                 <tr
                   key={lead.id}
