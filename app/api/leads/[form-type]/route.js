@@ -118,7 +118,6 @@ export async function POST(req, { params }) {
       },
       body: JSON.stringify(seebPayload),
     });
-
     if (!seebResponse.ok) {
       const errorText = await seebResponse.text();
       console.error("Seeb API Error:", errorText);
@@ -143,6 +142,7 @@ export async function POST(req, { params }) {
     } catch (emailError) {
       console.error("Email notification failed:", emailError);
     }
+    console.log(seebPayload, seebResponse)
 
     return NextResponse.json({ success: seebResponse.ok });
   } catch (error) {
