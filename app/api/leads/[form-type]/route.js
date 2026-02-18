@@ -49,6 +49,7 @@ export async function POST(req, { params }) {
         body: JSON.stringify(seebPayload),
       },
     );
+    console.log(headers)
     if (!seebResponse.ok) {
       const errorText = await seebResponse.text();
       console.error("Seeb API Error:", errorText);
