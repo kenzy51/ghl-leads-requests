@@ -41,15 +41,16 @@ export async function POST(req, { params }) {
       "Content-Type": "application/json",
       "X-Seeb-Secret": process.env.SEEB_AI_PASSWORD,
     };
+    const seebUrl = "https://api.seeb.ai/api/v1/webhook/outbound/6998c24d6c47d28eb827bb40"
     const seebResponse = await fetch(
-      "https://api.seeb.ai/api/v1/webhook/outbound/6998c24d6c47d28eb827bb40",
+      seebUrl,
       {
         method: "POST",
         headers: headers,
         body: JSON.stringify(seebPayload),
       },
     );
-    console.log(headers)
+    console.log(headers, seebUrl)
     if (!seebResponse.ok) {
       const errorText = await seebResponse.text();
       console.error("Seeb API Error:", errorText);
