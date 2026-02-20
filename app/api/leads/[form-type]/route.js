@@ -31,8 +31,8 @@ export async function POST(req, { params }) {
           description: messageContent,
           email: email,
           metadata: {
-            source: contact_source || "web_form",
-            form_id: formType,
+            source: contact_source || "homepage_signup",
+            priority: "high",
           },
         },
       ],
@@ -42,7 +42,7 @@ export async function POST(req, { params }) {
       "X-Seeb-Secret": process.env.SEEB_AI_PASSWORD,
     };
     const seebResponse = await fetch(
-      "https://api.seeb.ai/api/v1/webhook/outbound",
+      "https://api.seeb.ai/api/v1/webhook/outbound/6998c24d6c47d28eb827bb40",
       {
         method: "POST",
         headers: headers,
@@ -59,10 +59,10 @@ export async function POST(req, { params }) {
       await resend.emails.send({
         from: "onboarding@resend.dev",
         to: ["kanatnazarov51@gmail.com"],
-        subject: `🦷 New Emergency Lead: ${first_name}`,
+        subject: `🦷 New Lead: ${first_name}`,
         html: `
         <div style="font-family: sans-serif; padding: 20px; border: 1px solid #eee;">
-          <h2 style="color: #d32f2f;">New Emergency Lead Received</h2>
+          <h2 style="color: #d32f2f;">New Lead Received</h2>
           <p><strong>Name:</strong> ${first_name} ${last_name || ""}</p>
           <p><strong>Phone:</strong> <a href="tel:${phone}">${phone}</a></p>
           <p><strong>Email:</strong> ${email}</p>
