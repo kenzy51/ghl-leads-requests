@@ -41,28 +41,28 @@ export async function GET(req: Request) {
   return new Response("Verification failed", { status: 403 });
 }
 
-/**
- * 2. LEAD PROCESSING (POST)
- * Receives the lead ID from Meta, fetches details, and triggers AI.
- */
+export const dynamic = 'force-dynamic';
+
 export async function POST(req: Request) {
   try {
     const body: MetaLeadPayload = await req.json();
 
-    // Verify this is a leadgen event
     if (body.object === "page" && body.entry?.[0]?.changes?.[0]?.value) {
       const leadId = body.entry[0].changes[0].value.leadgen_id;
 
-      // 1. Fetch full lead data from Meta Graph API
+      // 1. Fetch lead data with a 5-second timeout
       const metaRes = await fetch(
-        `https://graph.facebook.com/v22.0/${leadId}?fields=field_data,created_time&access_token=${process.env.META_ACCESS_TOKEN}`,
+        `https://graph.facebook.com/v22.0/${leadId}?fields=field_data&access_token=${process.env.META_ACCESS_TOKEN}`,
+        { signal: AbortSignal.timeout(5000) }
       );
 
-      if (!metaRes.ok) throw new Error("Failed to fetch lead from Meta");
+      if (!metaRes.ok) {
+        console.error("Meta API Error:", await metaRes.text());
+        throw new Error("Failed to fetch lead from Meta");
+      }
 
       const metaData: MetaLeadDetails = await metaRes.json();
 
-      // 2. Map Meta's array format to clean variables
       let firstName = "Meta";
       let lastName = "Lead";
       let phone = "";
@@ -74,68 +74,59 @@ export async function POST(req: Request) {
           const parts = value.split(" ");
           firstName = parts[0];
           lastName = parts.length > 1 ? parts.slice(1).join(" ") : "";
+        } else if (field.name === "first_name") {
+          firstName = value;
+        } else if (field.name === "last_name") {
+          lastName = value;
+        } else if (field.name === "phone_number") {
+          phone = value;
+        } else if (field.name === "email") {
+          email = value;
         }
-        if (field.name === "first_name") firstName = value;
-        if (field.name === "last_name") lastName = value;
-        if (field.name === "phone_number") phone = value;
-        if (field.name === "email") email = value;
       });
 
+      // 2. Trigger Seeb.ai and Resend SIMULTANEOUSLY to save time
       const seebPayload = {
         parsing: "default",
-        data: [
-          {
-            first_name: firstName,
-            last_name: lastName,
-            phone_number: phone,
-            description: "New NightLase lead from Meta Ads.",
-            email: email,
-            metadata: {
-              source: "meta_ads",
-              priority: "high",
-            },
-          },
-        ],
+        data: [{
+          first_name: firstName,
+          last_name: lastName,
+          phone_number: phone,
+          email: email,
+          description: "New NightLase lead from Meta Ads.",
+          metadata: { source: "meta_ads", priority: "high" },
+        }],
       };
 
-      const seebResponse = await fetch(
-        "https://api.seeb.ai/api/v1/webhook/outbound/6998c24d6c47d28eb827bb40",
-        {
+      // We use allSettled so if one fails, the other still runs
+      const [seebResult] = await Promise.allSettled([
+        fetch("https://api.seeb.ai/api/v1/webhook/outbound/6998c24d6c47d28eb827bb40", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
             "X-Seeb-Secret": process.env.SEEB_AI_PASSWORD as string,
           },
           body: JSON.stringify(seebPayload),
-        },
-      );
+          signal: AbortSignal.timeout(5000),
+        }),
+        resend.emails.send({
+          from: "onboarding@resend.dev",
+          to: ["kanatnazarov51@gmail.com"],
+          subject: `🦷 META LEAD: ${firstName}`,
+          html: `<p>New Lead: ${firstName} ${lastName}</p><p>Phone: ${phone}</p>`,
+        })
+      ]);
 
-      // 4. EMAIL NOTIFICATION TO YOU (Kanat)
-      await resend.emails.send({
-        from: "onboarding@resend.dev",
-        to: ["kanatnazarov51@gmail.com"],
-        subject: `🦷 META LEAD: ${firstName}`,
-        html: `
-          <div style="font-family: sans-serif; padding: 20px; border: 1px solid #eee;">
-            <h2 style="color: #1877F2;">New Meta Ads Lead</h2>
-            <p><strong>Name:</strong> ${firstName} ${lastName}</p>
-            <p><strong>Phone:</strong> <a href="tel:${phone}">${phone}</a></p>
-            <p><strong>Email:</strong> ${email}</p>
-            <hr />
-            <p><strong>AI Agent:</strong> ${seebResponse.ok ? "✅ Triggered" : "❌ Failed"}</p>
-          </div>
-        `,
-      });
+      const seebOk = seebResult.status === 'fulfilled' && seebResult.value.ok;
 
-      return NextResponse.json({ success: true });
+      // 3. Return 200 immediately to Meta to stop the "Pending" status
+      return NextResponse.json({ success: true, ai_triggered: seebOk });
     }
 
-    return NextResponse.json(
-      { error: "Invalid payload structure" },
-      { status: 400 },
-    );
+    return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
   } catch (error: any) {
-    console.error("Meta Webhook Error:", error.message);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error("Webhook Error:", error.message);
+    // We return a 200 even on error so Meta stops retrying the "Pending" lead
+    return NextResponse.json({ error: error.message }, { status: 200 });
   }
 }
