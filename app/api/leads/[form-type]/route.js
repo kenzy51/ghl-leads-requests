@@ -33,8 +33,8 @@ export async function POST(req, { params }) {
           metadata: {
             source: contact_source || "homepage_signup",
             priority: "high",
+             serviceType:formType
           },
-          
         },
       ],
     };

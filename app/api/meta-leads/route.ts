@@ -95,6 +95,7 @@ export async function POST(req: Request) {
           email: email,
           description: "New NightLase lead from Meta Ads.",
           metadata: { source: "meta_ads", priority: "high" },
+          
         }],
       };
 
