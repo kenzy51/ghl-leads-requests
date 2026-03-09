@@ -1,20 +1,10 @@
 // NIGHTLASE LEADS
 import { NextResponse } from "next/server";
-import { FORM_ROUTING } from "../../../../app/lib/config";
 import { Resend } from "resend";
 
-export async function POST(req, { params }) {
+export async function POST(req) {
   const resend = new Resend(process.env.RESEND_API_KEY);
-  const resolvedParams = await params;
-  const formType = resolvedParams["form-type"];
-  const config = FORM_ROUTING[formType];
-
-  if (!config) {
-    return NextResponse.json(
-      { error: `Invalid form type: ${formType}` },
-      { status: 400 },
-    );
-  }
+ 
 
   try {
     const body = await req.json();
