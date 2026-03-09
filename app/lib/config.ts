@@ -15,7 +15,6 @@ export const FORM_ROUTING: Record<string, FormRoute> = {
   nightlase_form_id: {
     webhookUrl: "test",
     label:"nightlase"
-
   },
   implants_form_id: {
     webhookUrl: "test",
