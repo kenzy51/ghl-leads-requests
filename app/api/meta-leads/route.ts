@@ -17,27 +17,32 @@ export async function GET(request: Request) {
   }
 }
 
-// POST: Receives the Lead Notification from Meta
 export async function POST(request: Request) {
   try {
     const body = await request.json();
+    
+    // This will show the actual lead data structure in your Vercel logs
+    console.log('Incoming Meta Webhook Body:', JSON.stringify(body, null, 2));
 
-    // Meta sends a notification that a lead exists. 
-    // You then usually have to fetch the lead details using the lead_id.
+    // Meta sends an array of entries
     const entry = body.entry?.[0];
     const changes = entry?.changes?.[0];
-    const leadId = changes?.value?.leadgen_id;
+    
+    // Check if this is a leadgen change
+    if (changes?.field === 'leadgen') {
+      const leadId = changes.value.leadgen_id;
+      const pageId = changes.value.page_id;
+      
+      console.log(`New Lead Received! ID: ${leadId} from Page: ${pageId}`);
 
-    if (leadId) {
-      // 1. Fetch lead details from Meta Graph API (Optional but recommended)
-      // 2. Send the data to GoHighLevel
-      await sendToGoHighLevel(leadId);
+      // NEXT STEP: Call your GHL function here
+      // await sendToGHL(leadId); 
     }
 
-    return NextResponse.json({ received: true }, { status: 200 });
+    return new Response('EVENT_RECEIVED', { status: 200 });
   } catch (err) {
-    console.error('Webhook Error:', err);
-    return NextResponse.json({ error: 'Webhook failed' }, { status: 500 });
+    console.error('POST Error:', err);
+    return new Response('Error', { status: 500 });
   }
 }
 
