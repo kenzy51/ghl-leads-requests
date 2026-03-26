@@ -19,7 +19,7 @@ export async function POST(req, { params }) {
     const body = await req.json();
     const { first_name, last_name, phone, email, contact_source } = body;
 
-    const messageContent = "Interested in AI CRM integration."
+    const messageContent = "Interested in AI CRM integration.";
 
     const seebPayload = {
       parsing: "default",
@@ -33,7 +33,7 @@ export async function POST(req, { params }) {
           metadata: {
             source: contact_source || "homepage_signup",
             priority: "high",
-             serviceType:formType
+            serviceType: formType,
           },
         },
       ],
@@ -42,16 +42,14 @@ export async function POST(req, { params }) {
       "Content-Type": "application/json",
       "X-Seeb-Secret": process.env.SEEB_AI_PASSWORD,
     };
-    const seebUrl = "https://api.seeb.ai/api/v1/webhook/outbound/6998c24d6c47d28eb827bb40"
-    const seebResponse = await fetch(
-      seebUrl,
-      {
-        method: "POST",
-        headers: headers,
-        body: JSON.stringify(seebPayload),
-      },
-    );
-    console.log(headers, seebUrl)
+    const seebUrl =
+      "https://api.seeb.ai/api/v1/webhook/outbound/6998c24d6c47d28eb827bb40";
+    const seebResponse = await fetch(seebUrl, {
+      method: "POST",
+      headers: headers,
+      body: JSON.stringify(seebPayload),
+    });
+    console.log(headers, seebUrl);
     if (!seebResponse.ok) {
       const errorText = await seebResponse.text();
       console.error("Seeb API Error:", errorText);
