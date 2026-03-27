@@ -12,22 +12,28 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  console.log('--- NEW POST ROUTE HIT ---');
-  
+  // 1. Absolute top-level log to prove the request arrived
+  console.log('--- 🚀 INCOMING WEBHOOK DETECTED ---');
+
   try {
     const body = await request.json();
-    console.log('Body:', JSON.stringify(body, null, 2));
+    
+    // 2. Log the full payload so you can see it in Vercel
+    console.log('📦 FULL BODY:', JSON.stringify(body, null, 2));
 
+    // 3. Extract Lead ID (Checks both TEST sample and LIVE entry)
     const leadId = body.sample?.value?.leadgen_id || body.entry?.[0]?.changes?.[0]?.value?.leadgen_id;
 
     if (leadId) {
-      console.log('Captured Lead ID:', leadId);
-      // logic for GHL / Seeb.ai goes here
+      console.log('🎯 LEAD ID CAPTURED:', leadId);
+      // Here is where you will add the fetch to GHL/Seeb.ai
+    } else {
+      console.log('⚠️ Webhook received but no Lead ID found in this payload.');
     }
 
-    return NextResponse.json({ received: true });
+    return new Response('EVENT_RECEIVED', { status: 200 });
   } catch (err) {
-    console.error('POST Error:', err);
-    return NextResponse.json({ error: 'Failed' }, { status: 500 });
+    console.error('🔥 CRITICAL POST ERROR:', err);
+    return new Response('Error', { status: 500 });
   }
 }
