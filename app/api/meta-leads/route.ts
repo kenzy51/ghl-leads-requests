@@ -21,27 +21,31 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
     
-    // This will show the actual lead data structure in your Vercel logs
-    console.log('Incoming Meta Webhook Body:', JSON.stringify(body, null, 2));
+    // 1. Log EVERYTHING immediately. 
+    // If this doesn't show up, the request isn't hitting the server at all.
+    console.log('--- RAW WEBHOOK START ---');
+    console.log(JSON.stringify(body, null, 2));
 
-    // Meta sends an array of entries
-    const entry = body.entry?.[0];
-    const changes = entry?.changes?.[0];
-    
-    // Check if this is a leadgen change
-    if (changes?.field === 'leadgen') {
-      const leadId = changes.value.leadgen_id;
-      const pageId = changes.value.page_id;
+    // 2. Handle the "Test" button from Meta Dashboard
+    if (body.object === 'page' || body.sample) {
+      const entry = body.entry?.[0];
+      const changes = entry?.changes?.[0];
       
-      console.log(`New Lead Received! ID: ${leadId} from Page: ${pageId}`);
+      // Use leadId from live changes OR from the sample payload
+      const leadId = changes?.value?.leadgen_id || body.sample?.value?.leadgen_id;
+      const pageId = changes?.value?.page_id || body.sample?.value?.page_id;
 
-      // NEXT STEP: Call your GHL function here
-      // await sendToGHL(leadId); 
+      if (leadId) {
+        console.log(`✅ SUCCESS: Lead ID ${leadId} captured from Page ${pageId}`);
+        // await sendToGoHighLevel(leadId); 
+      } else {
+        console.log('⚠️ Webhook received but no Lead ID found in payload.');
+      }
     }
 
     return new Response('EVENT_RECEIVED', { status: 200 });
   } catch (err) {
-    console.error('POST Error:', err);
+    console.error('❌ POST Error:', err);
     return new Response('Error', { status: 500 });
   }
 }
