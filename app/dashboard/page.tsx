@@ -6,11 +6,6 @@ import { useAuth } from "../context/auth-context";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
-interface CustomField {
-  id: string;
-  value: string;
-}
-
 interface LeadType {
   email: string;
   id: string;
@@ -19,115 +14,97 @@ interface LeadType {
   phone: string;
   dateAdded: string;
   source: string;
-  customFields?: CustomField[];
 }
 
 export default function DashboardPage() {
   const [mounted, setMounted] = useState<boolean>(false);
   const { isAuthenticated } = useAuth();
 
-  const { data: leads, error } = useSWR(
+  const { data: leads, error, isLoading } = useSWR(
     isAuthenticated ? "/api/leads" : null,
     fetcher,
-    // { refreshInterval: 10000 }
+    { revalidateOnFocus: false } 
   );
 
   useEffect(() => {
-    queueMicrotask(() => setMounted(true));
+    setMounted(true);
   }, []);
 
   if (!mounted) return null;
-  if (!isAuthenticated) return <div>Not authenticated</div>;
-  if (error)
-    return <div className="p-8 text-red-500">Failed to load leads.</div>;
-  if (!leads)
-    return (
-      <div className="p-8 text-black font-medium">Syncing live from GHL...</div>
-    );
+  if (!isAuthenticated) return <div className="p-8">Access Denied. Please log in.</div>;
 
   return (
-    <div className="p-8 bg-white min-h-screen text-black">
-      <div className="flex justify-between items-center mb-6">
+    <div className="p-8 bg-white min-h-screen text-black font-sans">
+      <div className="flex justify-between items-end mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">
+          <h1 className="text-3xl font-bold tracking-tighter text-gray-900 uppercase">
             Tribeca Dental Studio
           </h1>
-          <p className="text-sm text-gray-500 font-medium">
-            AI Automation Monitoring
+          <p className="text-sm text-gray-500 font-light tracking-widest uppercase">
+            AI Lead Automation Panel
           </p>
         </div>
-        <span className="bg-blue-100 text-blue-800 text-xs font-bold px-3 py-1 rounded-full border border-blue-200">
-          {leads.length} Active Leads
-        </span>
+        <div className="flex flex-col items-end">
+          <span className="bg-green-50 text-green-700 text-[10px] font-bold px-3 py-1 rounded-full border border-green-200 uppercase tracking-widest mb-1">
+            Live Sync Active
+          </span>
+          <p className="text-xs text-gray-400">
+            {isLoading ? "Fetching..." : `${leads?.length || 0} Total Leads Found`}
+          </p>
+        </div>
       </div>
 
-      <div className="overflow-x-auto border border-gray-200 rounded-xl shadow-sm">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
-                Name
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
-                Contact Info
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
-                Date
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">
-                Source
-              </th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {leads.map((lead: LeadType) => {
-              return (
-                <tr
-                  key={lead.id}
-                  className="hover:bg-blue-50/30 transition-colors"
-                >
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
-                    {lead.firstName || "Unknown"} {lead.lastName || ""}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                    <div className="flex flex-col">
-                      <a href={`mailto:${lead.email}`}>
-                        <span>{lead.email}</span>
-                      </a>
-                      <span className="text-xs font-mono text-gray-400">
-                        {lead.phone}
+      <div className="overflow-hidden border border-gray-100 rounded-2xl shadow-sm bg-white">
+        <div className="overflow-x-auto max-h-[70vh]">
+          <table className="min-w-full divide-y divide-gray-100">
+            <thead className="bg-gray-50 sticky top-0 z-10">
+              <tr>
+                {["Name", "Contact Details", "Acquisition Date", "Source"].map((head) => (
+                  <th key={head} className="px-6 py-4 text-left text-[10px] font-bold text-gray-400 uppercase tracking-[2px]">
+                    {head}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-50">
+              {isLoading ? (
+                Array.from({ length: 5 }).map((_, i) => (
+                  <tr key={i} className="animate-pulse">
+                    <td colSpan={4} className="px-6 py-6 bg-gray-50/50"></td>
+                  </tr>
+                ))
+              ) : leads?.length > 0 ? (
+                leads.map((lead: LeadType) => (
+                  <tr key={lead.id} className="hover:bg-gray-50/50 transition-colors">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                      {lead.firstName} {lead.lastName}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                      <div className="flex flex-col">
+                        <span className="font-light">{lead.email}</span>
+                        <span className="text-[11px] font-mono text-gray-400">{lead.phone}</span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 font-light">
+                      {lead.dateAdded ? new Date(lead.dateAdded).toLocaleDateString() : "N/A"}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className="px-2 py-1 text-[9px] font-bold uppercase tracking-widest bg-gray-100 text-gray-500 rounded-md">
+                        {lead.source || "Direct"}
                       </span>
-                    </div>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={4} className="px-6 py-20 text-center text-gray-400 text-sm italic">
+                    No leads found in this location.
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    <span suppressHydrationWarning>
-                      {lead.dateAdded
-                        ? new Date(lead.dateAdded).toLocaleDateString()
-                        : "N/A"}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="px-2 py-1 text-[10px] font-bold uppercase tracking-tight bg-gray-100 text-gray-600 rounded">
-                      {lead.source || "Direct"}
-                    </span>
-                  </td>
-                  {/* <td className="px-6 py-4 whitespace-nowrap text-sm">
-                    {isCalled ? (
-                      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-green-100 text-green-700 border border-green-200">
-                        <span className="w-2 h-2 mr-1.5 bg-green-500 rounded-full animate-pulse"></span>
-                        AI Agent Called
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-500">
-                        Pending
-                      </span>
-                    )}
-                  </td> */}
                 </tr>
-              );
-            })}
-          </tbody>
-        </table>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
