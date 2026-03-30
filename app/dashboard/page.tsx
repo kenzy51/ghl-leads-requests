@@ -29,7 +29,7 @@ export default function DashboardPage() {
   const { data: leads, error } = useSWR(
     isAuthenticated ? "/api/leads" : null,
     fetcher,
-    { refreshInterval: 10000 }
+    // { refreshInterval: 10000 }
   );
 
   useEffect(() => {

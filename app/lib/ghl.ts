@@ -10,7 +10,7 @@ export async function getAllLeads() {
 
   try {
     const response = await fetch(
-      `https://services.leadconnectorhq.com/contacts/?locationId=${LOCATION_ID}&limit=150`,
+      `https://services.leadconnectorhq.com/contacts/?locationId=${LOCATION_ID}&limit=250`,
       {
         method: 'GET',
         headers: {
