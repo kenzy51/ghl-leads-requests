@@ -148,7 +148,7 @@ export async function POST(req: Request) {
       "X-Newton-Secret": process.env.NEWTON_MARKETING_SECRET || "06b81da012d94c973e454535114331cc8c5d9ebd64d46c96267dfd0f3d5b5891",
     };
     const newtonUrl = "https://dentalexpressserver.azurewebsites.net/newtonMarketingWebhook";
-
+    // added new commit
     console.log("🚀 SENDING TO NEWTON MARKETING...");
     console.log("URL:", newtonUrl);
     console.log("PAYLOAD:", JSON.stringify(newtonPayload, null, 2));
