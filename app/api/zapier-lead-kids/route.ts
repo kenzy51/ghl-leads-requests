@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextResponse } from "next/server";
 import { Resend } from "resend";
 
@@ -51,7 +52,7 @@ export async function POST(req: Request) {
         last_name,
         phone_number: phone,
         email: email,
-        description: "Nightlase spanish",
+        description: "Tribeca Dental Studio 4 kids inquiry",
         metadata: {
           lead_id,
           source: "facebook_leads",
@@ -80,7 +81,8 @@ export async function POST(req: Request) {
       ghl: ghlStatus,
       seeb: seebResponse.ok
     });
-
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore
   } catch (error: any) {
     console.error("Critical Pipeline Failure:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
