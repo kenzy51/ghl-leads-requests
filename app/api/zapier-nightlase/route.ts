@@ -4,22 +4,30 @@ import { Resend } from "resend";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
+// Updated interface to mirror Zapier's nested payload structure
 interface ZapierLeadBody {
   lead_id: string;
-  email: string;
-  full_name: string;
-  phone: string;
+  data?: {
+    email: string;
+    full_name: string;
+    phone: string;
+  };
 }
 
-// Helper function to format phone number to E.164
+// Helper function to format phone number to E.164 compliance
 function formatToE164(phoneStr: string): string {
   if (!phoneStr) return "";
+  
+  // Strip out everything except digits
   const cleaned = phoneStr.replace(/\D/g, "");
+  
+  // Format standard 10-digit North American numbers
   if (cleaned.length === 10) {
     return `+1${cleaned}`;
   } else if (cleaned.length > 10 && !phoneStr.startsWith("+")) {
     return `+${cleaned}`;
   }
+  
   return phoneStr.startsWith("+") ? phoneStr : `+${cleaned}`;
 }
 
@@ -32,18 +40,22 @@ export async function POST(req: Request) {
   try {
     const body: ZapierLeadBody = await req.json();
     
+    // Extract lead_id from the root, and the contact fields from the nested data block
+    const { lead_id } = body;
+    const { full_name, email, phone } = body.data || { full_name: "", email: "", phone: "" };
+
     // ==========================================
     // DEBUG: DATA RECEIVED FROM ZAPIER
     // ==========================================
     console.log("==================================================");
     console.log("📥 [DEBUG] DATA RECEIVED FROM ZAPIER:");
-    console.log(`   - lead_id:   ${body.lead_id}`);
-    console.log(`   - full_name: ${body.full_name}`);
-    console.log(`   - email:     ${body.email}`);
-    console.log(`   - phone:     ${body.phone}`);
+    console.log(`   - lead_id:   ${lead_id}`);
+    console.log(`   - full_name: ${full_name}`);
+    console.log(`   - email:     ${email}`);
+    console.log(`   - phone:     ${phone}`);
     console.log("==================================================");
 
-    const { lead_id, email, full_name, phone } = body;
+    // Sanitize the phone string for downstream APIs
     const formattedPhone = formatToE164(phone);
 
     const nameParts = full_name ? full_name.split(" ") : ["Patient"];
@@ -55,6 +67,7 @@ export async function POST(req: Request) {
     // 1. GO HIGH LEVEL (GHL) REQUEST
     // ==========================================
     let ghlStatus = "Skipped";
+    console.log("🚀 SENDING TO GO-HIGH-LEVEL...");
     try {
       const ghlResponse = await fetch(`https://services.leadconnectorhq.com/contacts/`, {
         method: 'POST',
@@ -74,9 +87,15 @@ export async function POST(req: Request) {
         }),
       });
       ghlStatus = ghlResponse.ok ? "✅ Success" : `❌ Failed (${ghlResponse.status})`;
+      if (!ghlResponse.ok) {
+        console.error("GHL API Error Response:", await ghlResponse.text());
+      }
     } catch (e: any) {
+      console.error("GHL Execution Exception:", e.message);
       ghlStatus = "🔥 Error";
     }
+    console.log(`📡 GHL STATUS: ${ghlStatus}`);
+    console.log("--------------------------------------------------");
 
 
     // ==========================================
@@ -119,6 +138,7 @@ export async function POST(req: Request) {
     const seebStatuses: boolean[] = [];
 
     for (const [index, url] of seebEndpoints.entries()) {
+      console.log(`🚀 SENDING TO SEEB ENDPOINT #${index + 1}...`);
       try {
         const seebResponse = await fetch(url.trim(), {
           method: "POST",
@@ -126,16 +146,18 @@ export async function POST(req: Request) {
           body: JSON.stringify(seebPayload),
         });
         
+        console.log(`📡 SEEB #${index + 1} STATUS: ${seebResponse.status} ${seebResponse.statusText}`);
         seebStatuses.push(seebResponse.ok);
         
         if (!seebResponse.ok) {
-          console.error(`❌ Seeb #${index + 1} Error Details Response:`, await seebResponse.text());
+          console.error(`❌ Seeb #${index + 1} Error Details:`, await seebResponse.text());
         }
       } catch (e: any) {
         console.error(`💥 Seeb #${index + 1} Network Exception:`, e.message);
         seebStatuses.push(false);
       }
     }
+    console.log("--------------------------------------------------");
 
 
     // ==========================================
@@ -165,6 +187,7 @@ export async function POST(req: Request) {
     };
     const newtonUrl = "https://dentalexpressserver.azurewebsites.net/newtonMarketingWebhook";
 
+    console.log("🚀 SENDING TO NEWTON MARKETING...");
     let newtonResponseOk = false;
     try {
       const newtonResponse = await fetch(newtonUrl, {
@@ -172,10 +195,17 @@ export async function POST(req: Request) {
         headers: newtonHeaders,
         body: JSON.stringify(newtonPayload),
       });
+
       newtonResponseOk = newtonResponse.ok;
+      console.log(`📡 NEWTON RESPONSE STATUS: ${newtonResponse.status} ${newtonResponse.statusText}`);
+
+      if (!newtonResponse.ok) {
+        console.error("❌ Newton API Error Details:", await newtonResponse.text());
+      }
     } catch (e: any) {
       console.error("💥 Newton Fetch Network Exception:", e.message);
     }
+    console.log("==================================================");
 
     return NextResponse.json({
       success: true,
