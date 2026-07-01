@@ -11,6 +11,18 @@ interface ZapierLeadBody {
   phone: string;
 }
 
+// Helper function to format phone number to E.164
+function formatToE164(phoneStr: string): string {
+  if (!phoneStr) return "";
+  const cleaned = phoneStr.replace(/\D/g, "");
+  if (cleaned.length === 10) {
+    return `+1${cleaned}`;
+  } else if (cleaned.length > 10 && !phoneStr.startsWith("+")) {
+    return `+${cleaned}`;
+  }
+  return phoneStr.startsWith("+") ? phoneStr : `+${cleaned}`;
+}
+
 export async function POST(req: Request) {
   const zapierSecret = req.headers.get('x-zapier-secret');
   if (zapierSecret !== process.env.ZAPIER_SECRET) {
@@ -20,12 +32,19 @@ export async function POST(req: Request) {
   try {
     const body: ZapierLeadBody = await req.json();
     
+    // ==========================================
+    // DEBUG: DATA RECEIVED FROM ZAPIER
+    // ==========================================
     console.log("==================================================");
-    console.log("📥 INCOMING ZAPIER PIPELINE LEAD RECEIVED");
-    console.log("RAW BODY:", JSON.stringify(body, null, 2));
+    console.log("📥 [DEBUG] DATA RECEIVED FROM ZAPIER:");
+    console.log(`   - lead_id:   ${body.lead_id}`);
+    console.log(`   - full_name: ${body.full_name}`);
+    console.log(`   - email:     ${body.email}`);
+    console.log(`   - phone:     ${body.phone}`);
     console.log("==================================================");
 
     const { lead_id, email, full_name, phone } = body;
+    const formattedPhone = formatToE164(phone);
 
     const nameParts = full_name ? full_name.split(" ") : ["Patient"];
     const first_name = nameParts[0];
@@ -36,7 +55,6 @@ export async function POST(req: Request) {
     // 1. GO HIGH LEVEL (GHL) REQUEST
     // ==========================================
     let ghlStatus = "Skipped";
-    console.log("🚀 SENDING TO GO-HIGH-LEVEL...");
     try {
       const ghlResponse = await fetch(`https://services.leadconnectorhq.com/contacts/`, {
         method: 'POST',
@@ -50,21 +68,15 @@ export async function POST(req: Request) {
           firstName: first_name,
           lastName: last_name,
           email: email,
-          phone: phone,
+          phone: formattedPhone,
           customFields: [{ key: 'meta_lead_id', field_value: lead_id }],
           source: "Meta Lead Ads (via Vercel Pipeline)"
         }),
       });
       ghlStatus = ghlResponse.ok ? "✅ Success" : `❌ Failed (${ghlResponse.status})`;
-      if (!ghlResponse.ok) {
-        console.error("GHL API Error Response:", await ghlResponse.text());
-      }
     } catch (e: any) {
-      console.error("GHL Execution Exception:", e.message);
       ghlStatus = "🔥 Error";
     }
-    console.log(`📡 GHL STATUS: ${ghlStatus}`);
-    console.log("--------------------------------------------------");
 
 
     // ==========================================
@@ -75,7 +87,7 @@ export async function POST(req: Request) {
       data: [{
         first_name,
         last_name,
-        phone_number: phone,
+        phone_number: formattedPhone,
         email: email,
         description: messageContent,
         metadata: {
@@ -86,21 +98,27 @@ export async function POST(req: Request) {
       }],
     };
 
+    // ==========================================
+    // DEBUG: DATA BEING SENT TO SEEB
+    // ==========================================
+    console.log("==================================================");
+    console.log("🚀 [DEBUG] OUTBOUND PAYLOAD BEING SENT TO SEEB.AI:");
+    console.log(JSON.stringify(seebPayload, null, 2));
+    console.log("==================================================");
+
     const seebHeaders = {
       "Content-Type": "application/json",
       "X-Seeb-Secret": process.env.SEEB_AI_PASSWORD as string,
     };
 
     const seebEndpoints = [
-      "https://api.seeb.ai/api/v1/webhook/outbound/6a457905aa09c512c1fbfc27", // Endpoint 1
-      "https://api.seeb.ai/api/v1/webhook/outbound/6a457905aa09c512c1fbfc27"  // Endpoint 2
+      "https://api.seeb.ai/api/v1/webhook/outbound/6a457905aa09c512c1fbfc27",
+      "https://api.seeb.ai/api/v1/webhook/outbound/6a457905aa09c512c1fbfc27"
     ];
 
     const seebStatuses: boolean[] = [];
 
     for (const [index, url] of seebEndpoints.entries()) {
-      console.log(`🚀 SENDING TO SEEB ENDPOINT #${index + 1}...`);
-      console.log(`URL: ${url}`);
       try {
         const seebResponse = await fetch(url.trim(), {
           method: "POST",
@@ -108,18 +126,16 @@ export async function POST(req: Request) {
           body: JSON.stringify(seebPayload),
         });
         
-        console.log(`📡 SEEB #${index + 1} STATUS: ${seebResponse.status} ${seebResponse.statusText}`);
         seebStatuses.push(seebResponse.ok);
         
         if (!seebResponse.ok) {
-          console.error(`❌ Seeb #${index + 1} Error Details:`, await seebResponse.text());
+          console.error(`❌ Seeb #${index + 1} Error Details Response:`, await seebResponse.text());
         }
       } catch (e: any) {
         console.error(`💥 Seeb #${index + 1} Network Exception:`, e.message);
         seebStatuses.push(false);
       }
     }
-    console.log("--------------------------------------------------");
 
 
     // ==========================================
@@ -131,7 +147,7 @@ export async function POST(req: Request) {
         {
           first_name: first_name,
           last_name: last_name,
-          phone_number: phone,
+          phone_number: formattedPhone,
           description: messageContent,
           campaignType: "Nightlase english speaking",
           email: email,
@@ -148,10 +164,6 @@ export async function POST(req: Request) {
       "X-Newton-Secret": process.env.NEWTON_MARKETING_SECRET || "06b81da012d94c973e454535114331cc8c5d9ebd64d46c96267dfd0f3d5b5891",
     };
     const newtonUrl = "https://dentalexpressserver.azurewebsites.net/newtonMarketingWebhook";
-    // added new commit
-    console.log("🚀 SENDING TO NEWTON MARKETING...");
-    console.log("URL:", newtonUrl);
-    console.log("PAYLOAD:", JSON.stringify(newtonPayload, null, 2));
 
     let newtonResponseOk = false;
     try {
@@ -160,20 +172,11 @@ export async function POST(req: Request) {
         headers: newtonHeaders,
         body: JSON.stringify(newtonPayload),
       });
-
       newtonResponseOk = newtonResponse.ok;
-      console.log(`📡 NEWTON RESPONSE STATUS: ${newtonResponse.status} ${newtonResponse.statusText}`);
-
-      if (!newtonResponse.ok) {
-        console.error("❌ Newton API Error Details:", await newtonResponse.text());
-      }
     } catch (e: any) {
       console.error("💥 Newton Fetch Network Exception:", e.message);
     }
-    console.log("==================================================");
 
-
-    // Return clean mapping back to the response engine
     return NextResponse.json({
       success: true,
       ghl: ghlStatus,
