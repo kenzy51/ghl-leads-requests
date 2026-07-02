@@ -7,11 +7,9 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 // Updated interface to mirror Zapier's nested payload structure
 interface ZapierLeadBody {
   lead_id: string;
-  data?: {
-    email: string;
-    full_name: string;
-    phone: string;
-  };
+  email: string;
+  full_name: string;
+  phone: string;
 }
 
 // Helper function to format phone number to E.164 compliance
@@ -40,13 +38,7 @@ export async function POST(req: Request) {
   try {
     const body: ZapierLeadBody = await req.json();
     
-    // Extract lead_id from the root, and the contact fields from the nested data block
-    const { lead_id } = body;
-    const { full_name, email, phone } = body.data || { full_name: "", email: "", phone: "" };
-
-    // ==========================================
-    // DEBUG: DATA RECEIVED FROM ZAPIER
-    // ==========================================
+const { lead_id, full_name, email, phone } = body;
     console.log("==================================================");
     console.log("📥 [DEBUG] DATA RECEIVED FROM ZAPIER:");
     console.log(`   - lead_id:   ${lead_id}`);
