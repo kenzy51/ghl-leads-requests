@@ -92,8 +92,8 @@ export async function POST(req: Request) {
     };
 
     const seebEndpoints = [
-      "https://api.seeb.ai/api/v1/webhook/outbound/6998c24d6c47d28eb827bb40", // Endpoint 1
-      "https://api.seeb.ai/api/v1/webhook/outbound/69bdb2352f1356e1853dd264"  // Endpoint 2
+      "https://api.seeb.ai/api/v1/webhook/outbound/6a67679ef1b836038631358d", // Endpoint 1
+  // Endpoint 2
     ];
 
     const seebStatuses: boolean[] = [];
